@@ -1,5 +1,6 @@
 import mongoose, { Schema, model, Types, Model } from 'mongoose';
 import { softDeletePlugin } from './plugins/softDeletePlugin';
+import './User';
 
 export interface IPatient {
   userId: Types.ObjectId;

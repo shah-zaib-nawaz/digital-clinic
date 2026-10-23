@@ -2,6 +2,8 @@ import mongoose, { Schema, model, Types, Model } from 'mongoose';
 import { softDeletePlugin } from './plugins/softDeletePlugin';
 import { DepartmentLean } from './Department';
 import { UserLean } from './User';
+import './User';
+import './Department';
 
 export interface IDoctor {
   userId: Types.ObjectId;

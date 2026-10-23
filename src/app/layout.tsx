@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { Toaster } from '@/components/ui/sonner';
+import { ReceptionistWidget } from '@/components/ai/receptionist-widget';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <AuthProvider>
               {children}
+              <ReceptionistWidget />
               <Toaster position="top-right" richColors />
             </AuthProvider>
           </Suspense>
