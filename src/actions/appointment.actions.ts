@@ -1,12 +1,20 @@
 'use server';
 
 import { updateTag, revalidatePath } from 'next/cache';
+import { after } from 'next/server';
+import * as React from 'react';
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { Appointment, AppointmentLean, AppointmentWithDetailsLean } from '@/models/Appointment';
 import { Doctor } from '@/models/Doctor';
 import { Patient } from '@/models/Patient';
 import { ensureSession } from '@/lib/session';
+import { sendClinicEmail } from '@/lib/email';
+import { createAndBroadcastNotification } from '@/lib/notification-bus';
+import { sendClinicSMS } from '@/lib/sms';
+import { BookingConfirmationEmail } from '@/emails/booking-confirmation';
+import { AppointmentCancelledEmail } from '@/emails/appointment-cancelled';
+import { AppointmentRescheduledEmail } from '@/emails/appointment-rescheduled';
 import {
   holdSlotSchemaCompiled,
   confirmHeldAppointmentSchemaCompiled,
@@ -184,6 +192,95 @@ export async function confirmHeldAppointmentAction(
 
     await appointment.save();
 
+    const confirmedId = appointment._id.toString();
+
+    // Asynchronous non-blocking dispatch via Next.js 16 after()
+    after(async () => {
+      try {
+        await connectDB();
+        const appt = await Appointment.findById(confirmedId)
+          .populate({
+            path: 'patientId',
+            populate: { path: 'userId', select: 'name email phone' },
+          })
+          .populate({
+            path: 'doctorId',
+            populate: [
+              { path: 'userId', select: 'name email' },
+              { path: 'departmentId', select: 'name' },
+            ],
+          })
+          .lean<any>();
+
+        if (!appt) return;
+
+        const patientUser = appt.patientId?.userId;
+        const doctorUser = appt.doctorId?.userId;
+        const dept = appt.doctorId?.departmentId;
+        const doctorName = doctorUser?.name ? `Dr. ${doctorUser.name}` : 'Dr. Physician';
+
+        const dateFormatted = new Date(appt.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const timeWindow = `${appt.startTime} - ${appt.endTime}`;
+
+        // 1. Transactional Email to Patient
+        if (patientUser?.email) {
+          await sendClinicEmail({
+            to: patientUser.email,
+            subject: `Consultation Confirmed with ${doctorName} for ${dateFormatted}`,
+            react: React.createElement(BookingConfirmationEmail, {
+              patientName: patientUser.name || 'Valued Patient',
+              doctorName,
+              specialization: appt.doctorId?.specialization || 'Clinical Medicine',
+              departmentName: dept?.name || 'General Clinic',
+              date: dateFormatted,
+              timeWindow,
+              appointmentId: `APT-${appt._id.toString().slice(-6).toUpperCase()}`,
+              portalUrl: `${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/appointments`,
+              chiefComplaint: appt.chiefComplaint,
+            }),
+            idempotencyKey: `confirm-email-${confirmedId}`,
+          });
+        }
+
+        // 2. Real-Time SSE Notification for Patient
+        if (patientUser?._id) {
+          await createAndBroadcastNotification({
+            userId: patientUser._id.toString(),
+            type: 'BOOKING_CONFIRMED',
+            title: 'Appointment Confirmed',
+            message: `Your visit with ${doctorName} is confirmed for ${dateFormatted} at ${timeWindow}.`,
+            actionUrl: '/patient/appointments',
+          });
+        }
+
+        // 3. Real-Time SSE Notification for Doctor
+        if (doctorUser?._id) {
+          await createAndBroadcastNotification({
+            userId: doctorUser._id.toString(),
+            type: 'BOOKING_CONFIRMED',
+            title: 'New Consultation Booked',
+            message: `${patientUser?.name || 'A patient'} booked a consultation for ${dateFormatted} at ${timeWindow}.`,
+            actionUrl: '/doctor',
+          });
+        }
+
+        // 4. Twilio SMS to Patient
+        if (patientUser?.phone) {
+          await sendClinicSMS({
+            to: patientUser.phone,
+            body: `Digital Clinic: Your visit with ${doctorName} is confirmed for ${dateFormatted} at ${timeWindow}. Manage at ${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/appointments`,
+          });
+        }
+      } catch (err) {
+        console.error('after(confirmHeldAppointmentAction) background error:', err);
+      }
+    });
+
     updateTag(`doctor-slots-${appointment.doctorId.toString()}`);
     updateTag('patient-appointments');
     revalidatePath('/patient/appointments');
@@ -292,6 +389,89 @@ export async function cancelAppointmentAction(
 
     await appointment.save();
 
+    const cancelledId = appointment._id.toString();
+
+    // Asynchronous non-blocking dispatch via Next.js 16 after()
+    after(async () => {
+      try {
+        await connectDB();
+        const appt = await Appointment.findById(cancelledId)
+          .populate({
+            path: 'patientId',
+            populate: { path: 'userId', select: 'name email phone' },
+          })
+          .populate({
+            path: 'doctorId',
+            populate: [{ path: 'userId', select: 'name email' }],
+          })
+          .lean<any>();
+
+        if (!appt) return;
+
+        const patientUser = appt.patientId?.userId;
+        const doctorUser = appt.doctorId?.userId;
+        const doctorName = doctorUser?.name ? `Dr. ${doctorUser.name}` : 'Dr. Physician';
+
+        const dateFormatted = new Date(appt.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const timeWindow = `${appt.startTime} - ${appt.endTime}`;
+
+        // 1. Transactional Email to Patient
+        if (patientUser?.email) {
+          await sendClinicEmail({
+            to: patientUser.email,
+            subject: `Appointment Cancelled - ${dateFormatted}`,
+            react: React.createElement(AppointmentCancelledEmail, {
+              patientName: patientUser.name || 'Valued Patient',
+              doctorName,
+              date: dateFormatted,
+              timeWindow,
+              appointmentId: `APT-${appt._id.toString().slice(-6).toUpperCase()}`,
+              cancellationReason: appt.cancellationReason || 'Consultation cancelled',
+              bookingUrl: `${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/book`,
+            }),
+            idempotencyKey: `cancel-email-${cancelledId}-${Date.now()}`,
+          });
+        }
+
+        // 2. Real-Time SSE Notification for Patient
+        if (patientUser?._id) {
+          await createAndBroadcastNotification({
+            userId: patientUser._id.toString(),
+            type: 'BOOKING_CANCELLED',
+            title: 'Appointment Cancelled',
+            message: `Your appointment with ${doctorName} on ${dateFormatted} has been cancelled.`,
+            actionUrl: '/patient/appointments',
+          });
+        }
+
+        // 3. Real-Time SSE Notification for Doctor
+        if (doctorUser?._id) {
+          await createAndBroadcastNotification({
+            userId: doctorUser._id.toString(),
+            type: 'BOOKING_CANCELLED',
+            title: 'Appointment Cancelled',
+            message: `${patientUser?.name || 'A patient'} cancelled the consultation for ${dateFormatted} at ${timeWindow}.`,
+            actionUrl: '/doctor',
+          });
+        }
+
+        // 4. Twilio SMS to Patient
+        if (patientUser?.phone) {
+          await sendClinicSMS({
+            to: patientUser.phone,
+            body: `Digital Clinic: Your appointment with ${doctorName} on ${dateFormatted} has been cancelled. Rebook anytime at ${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/book`,
+          });
+        }
+      } catch (err) {
+        console.error('after(cancelAppointmentAction) background error:', err);
+      }
+    });
+
     updateTag(`doctor-slots-${appointment.doctorId.toString()}`);
     updateTag('patient-appointments');
     revalidatePath('/patient/appointments');
@@ -376,6 +556,90 @@ export async function rescheduleAppointmentAction(
     } finally {
       await dbSession.endSession();
     }
+
+    const rescheduledId = updatedDoc._id.toString();
+
+    // Asynchronous non-blocking dispatch via Next.js 16 after()
+    after(async () => {
+      try {
+        await connectDB();
+        const appt = await Appointment.findById(rescheduledId)
+          .populate({
+            path: 'patientId',
+            populate: { path: 'userId', select: 'name email phone' },
+          })
+          .populate({
+            path: 'doctorId',
+            populate: [{ path: 'userId', select: 'name email' }],
+          })
+          .lean<any>();
+
+        if (!appt) return;
+
+        const patientUser = appt.patientId?.userId;
+        const doctorUser = appt.doctorId?.userId;
+        const doctorName = doctorUser?.name ? `Dr. ${doctorUser.name}` : 'Dr. Physician';
+
+        const dateFormatted = new Date(appt.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        const timeWindow = `${appt.startTime} - ${appt.endTime}`;
+
+        // 1. Transactional Email to Patient
+        if (patientUser?.email) {
+          await sendClinicEmail({
+            to: patientUser.email,
+            subject: `Appointment Rescheduled to ${dateFormatted}`,
+            react: React.createElement(AppointmentRescheduledEmail, {
+              patientName: patientUser.name || 'Valued Patient',
+              doctorName,
+              previousDate: 'Previous Appointment',
+              newDate: dateFormatted,
+              newTimeWindow: timeWindow,
+              appointmentId: `APT-${appt._id.toString().slice(-6).toUpperCase()}`,
+              portalUrl: `${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/appointments`,
+              reason: appt.cancellationReason || undefined,
+            }),
+            idempotencyKey: `reschedule-email-${rescheduledId}-${Date.now()}`,
+          });
+        }
+
+        // 2. Real-Time SSE Notification for Patient
+        if (patientUser?._id) {
+          await createAndBroadcastNotification({
+            userId: patientUser._id.toString(),
+            type: 'BOOKING_RESCHEDULED',
+            title: 'Appointment Rescheduled',
+            message: `Your appointment with ${doctorName} has been moved to ${dateFormatted} at ${timeWindow}.`,
+            actionUrl: '/patient/appointments',
+          });
+        }
+
+        // 3. Real-Time SSE Notification for Doctor
+        if (doctorUser?._id) {
+          await createAndBroadcastNotification({
+            userId: doctorUser._id.toString(),
+            type: 'BOOKING_RESCHEDULED',
+            title: 'Appointment Rescheduled',
+            message: `${patientUser?.name || 'A patient'} rescheduled their appointment to ${dateFormatted} at ${timeWindow}.`,
+            actionUrl: '/doctor',
+          });
+        }
+
+        // 4. Twilio SMS to Patient
+        if (patientUser?.phone) {
+          await sendClinicSMS({
+            to: patientUser.phone,
+            body: `Digital Clinic: Your appointment with ${doctorName} has been rescheduled to ${dateFormatted} at ${timeWindow}. Details: ${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/patient/appointments`,
+          });
+        }
+      } catch (err) {
+        console.error('after(rescheduleAppointmentAction) background error:', err);
+      }
+    });
 
     updateTag(`doctor-slots-${newDoctorId}`);
     updateTag('patient-appointments');

@@ -9,10 +9,9 @@ import {
   Users,
   FileEdit,
   Star,
-  Bell,
   Stethoscope,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const navItems = [
   { label: "Today's Queue", href: '/doctor', icon: Clock },
@@ -74,10 +73,7 @@ export default async function DoctorLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifications">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-teal-500" />
-            </Button>
+            <NotificationBell />
             <ThemeToggle />
             <UserButton />
           </div>

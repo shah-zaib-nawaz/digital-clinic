@@ -11,10 +11,9 @@ import {
   MessageSquare,
   Users2,
   Bot,
-  Bell,
   ShieldAlert,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 const navItems = [
   { label: 'KPI Overview', href: '/admin', icon: BarChart3 },
@@ -78,10 +77,7 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Alerts">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-indigo-500" />
-            </Button>
+            <NotificationBell />
             <ThemeToggle />
             <UserButton />
           </div>
