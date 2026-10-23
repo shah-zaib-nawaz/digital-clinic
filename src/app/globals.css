@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: oklch(0.99 0.002 240);
+    --foreground: oklch(0.18 0.02 240);
+
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.18 0.02 240);
+
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.18 0.02 240);
+
+    /* Clinical Primary Teal: Calm, authoritative, medical */
+    --primary: oklch(0.55 0.14 185);
+    --primary-foreground: oklch(0.99 0.002 240);
+
+    /* Secondary Clinical Slate */
+    --secondary: oklch(0.94 0.015 220);
+    --secondary-foreground: oklch(0.25 0.03 220);
+
+    --muted: oklch(0.95 0.01 220);
+    --muted-foreground: oklch(0.52 0.02 220);
+
+    --accent: oklch(0.92 0.03 185);
+    --accent-foreground: oklch(0.25 0.08 185);
+
+    --destructive: oklch(0.58 0.22 25);
+    --destructive-foreground: oklch(0.98 0.005 25);
+
+    --border: oklch(0.89 0.01 220);
+    --input: oklch(0.89 0.01 220);
+    --ring: oklch(0.55 0.14 185);
+
+    --radius: 0.625rem;
+
+    /* Semantic Appointment Status Badge Tokens (WCAG 2.2 AA compliant contrast >= 4.5:1) */
+    --status-held-bg: oklch(0.95 0.04 85);
+    --status-held-text: oklch(0.38 0.12 80);
+    --status-held-border: oklch(0.85 0.08 85);
+
+    --status-pending-bg: oklch(0.95 0.04 220);
+    --status-pending-text: oklch(0.35 0.10 220);
+    --status-pending-border: oklch(0.85 0.08 220);
+
+    --status-confirmed-bg: oklch(0.94 0.05 160);
+    --status-confirmed-text: oklch(0.32 0.12 160);
+    --status-confirmed-border: oklch(0.82 0.09 160);
+
+    --status-completed-bg: oklch(0.93 0.04 200);
+    --status-completed-text: oklch(0.30 0.11 200);
+    --status-completed-border: oklch(0.82 0.07 200);
+
+    --status-cancelled-bg: oklch(0.95 0.04 25);
+    --status-cancelled-text: oklch(0.40 0.18 25);
+    --status-cancelled-border: oklch(0.88 0.08 25);
+
+    --status-noshow-bg: oklch(0.93 0.02 280);
+    --status-noshow-text: oklch(0.35 0.06 280);
+    --status-noshow-border: oklch(0.84 0.03 280);
+  }
+
+  .dark {
+    --background: oklch(0.15 0.02 240);
+    --foreground: oklch(0.96 0.005 240);
+
+    --card: oklch(0.18 0.02 240);
+    --card-foreground: oklch(0.96 0.005 240);
+
+    --popover: oklch(0.18 0.02 240);
+    --popover-foreground: oklch(0.96 0.005 240);
+
+    --primary: oklch(0.68 0.13 185);
+    --primary-foreground: oklch(0.12 0.02 240);
+
+    --secondary: oklch(0.24 0.02 220);
+    --secondary-foreground: oklch(0.92 0.01 220);
+
+    --muted: oklch(0.24 0.02 220);
+    --muted-foreground: oklch(0.68 0.02 220);
+
+    --accent: oklch(0.28 0.05 185);
+    --accent-foreground: oklch(0.92 0.08 185);
+
+    --destructive: oklch(0.48 0.20 25);
+    --destructive-foreground: oklch(0.96 0.01 25);
+
+    --border: oklch(0.26 0.02 220);
+    --input: oklch(0.26 0.02 220);
+    --ring: oklch(0.68 0.13 185);
+
+    /* Dark Mode Appointment Status Tokens */
+    --status-held-bg: oklch(0.25 0.06 85);
+    --status-held-text: oklch(0.88 0.12 85);
+    --status-held-border: oklch(0.35 0.08 85);
+
+    --status-pending-bg: oklch(0.24 0.05 220);
+    --status-pending-text: oklch(0.85 0.10 220);
+    --status-pending-border: oklch(0.34 0.08 220);
+
+    --status-confirmed-bg: oklch(0.24 0.07 160);
+    --status-confirmed-text: oklch(0.85 0.12 160);
+    --status-confirmed-border: oklch(0.34 0.09 160);
+
+    --status-completed-bg: oklch(0.23 0.05 200);
+    --status-completed-text: oklch(0.84 0.10 200);
+    --status-completed-border: oklch(0.33 0.07 200);
+
+    --status-cancelled-bg: oklch(0.25 0.08 25);
+    --status-cancelled-text: oklch(0.88 0.14 25);
+    --status-cancelled-border: oklch(0.38 0.10 25);
+
+    --status-noshow-bg: oklch(0.22 0.03 280);
+    --status-noshow-text: oklch(0.82 0.06 280);
+    --status-noshow-border: oklch(0.32 0.04 280);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Status Tokens exposed to Tailwind Utility Classes */
+  --color-status-held: var(--status-held-text);
+  --color-status-held-bg: var(--status-held-bg);
+  --color-status-held-border: var(--status-held-border);
+
+  --color-status-pending: var(--status-pending-text);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-border: var(--status-pending-border);
+
+  --color-status-confirmed: var(--status-confirmed-text);
+  --color-status-confirmed-bg: var(--status-confirmed-bg);
+  --color-status-confirmed-border: var(--status-confirmed-border);
+
+  --color-status-completed: var(--status-completed-text);
+  --color-status-completed-bg: var(--status-completed-bg);
+  --color-status-completed-border: var(--status-completed-border);
+
+  --color-status-cancelled: var(--status-cancelled-text);
+  --color-status-cancelled-bg: var(--status-cancelled-bg);
+  --color-status-cancelled-border: var(--status-cancelled-border);
+
+  --color-status-noshow: var(--status-noshow-text);
+  --color-status-noshow-bg: var(--status-noshow-bg);
+  --color-status-noshow-border: var(--status-noshow-border);
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

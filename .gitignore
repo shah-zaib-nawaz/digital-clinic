@@ -26,3 +26,8 @@ playwright/.cache/
 # OS Files
 .DS_Store
 Thumbs.db
+
+# TypeScript & Cache
+*.tsbuildinfo
+.turbo/
+cookies*.txt

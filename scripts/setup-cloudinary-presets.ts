@@ -72,7 +72,7 @@ const PRESETS: PresetDefinition[] = [
 async function ensurePreset(preset: PresetDefinition) {
   try {
     // Check if preset already exists
-    const existing = await cloudinary.api.upload_preset(preset.name);
+    const _existing = await cloudinary.api.upload_preset(preset.name);
     console.log(`ℹ️ Preset "${preset.name}" exists. Updating...`);
     await cloudinary.api.update_upload_preset(preset.name, preset.options);
     console.log(`✅ Preset "${preset.name}" updated successfully.`);
