@@ -28,6 +28,7 @@ import {
   FileText,
   CalendarX2,
   Star,
+  Video,
 } from 'lucide-react';
 import { ReviewModal } from '@/components/reviews/review-modal';
 
@@ -212,6 +213,17 @@ export function PatientAppointmentsClient({
                           </Button>
                         </Link>
                       </>
+                    )}
+
+                    {appt.status === 'confirmed' && (
+                      <Link href={`/patient/telehealth/${appt.id || appt._id.toString()}`}>
+                        <Button
+                          size="sm"
+                          className="text-xs h-8 gap-1.5 bg-teal-600 hover:bg-teal-700 text-white shadow-2xs"
+                        >
+                          <Video className="h-3.5 w-3.5" /> Join Telehealth
+                        </Button>
+                      </Link>
                     )}
 
                     {isCancellable && (

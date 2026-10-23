@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppointmentWithDetailsLean } from '@/models/Appointment';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
   FileCheck,
   Play,
   Calendar,
+  Video,
 } from 'lucide-react';
 import { SoapNoteDialog } from '@/components/clinical/soap-note-dialog';
 
@@ -186,18 +188,30 @@ export function DoctorQueueClient({ initialQueue }: DoctorQueueClientProps) {
 
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     {appt.status === 'confirmed' && (
-                      <Button
-                        size="sm"
-                        className="gap-1.5 h-8 text-xs shadow-2xs bg-teal-600 hover:bg-teal-700 text-white"
-                        onClick={() =>
-                          setActiveAppointment({
-                            id: apptId,
-                            patientName,
-                          })
-                        }
-                      >
-                        <Play className="h-3.5 w-3.5 fill-current" /> Start Consultation
-                      </Button>
+                      <>
+                        <Link href={`/doctor/telehealth/${apptId}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 h-8 text-xs border-teal-500/30 text-teal-600 dark:text-teal-400 hover:bg-teal-500/10 shadow-2xs"
+                          >
+                            <Video className="h-3.5 w-3.5" /> Video Visit
+                          </Button>
+                        </Link>
+
+                        <Button
+                          size="sm"
+                          className="gap-1.5 h-8 text-xs shadow-2xs bg-teal-600 hover:bg-teal-700 text-white"
+                          onClick={() =>
+                            setActiveAppointment({
+                              id: apptId,
+                              patientName,
+                            })
+                          }
+                        >
+                          <Play className="h-3.5 w-3.5 fill-current" /> Chart SOAP
+                        </Button>
+                      </>
                     )}
 
                     {appt.status === 'completed' && (
