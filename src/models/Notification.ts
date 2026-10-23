@@ -7,7 +7,8 @@ export type NotificationType =
   | 'BOOKING_RESCHEDULED'
   | 'REMINDER'
   | 'VISIT_NOTE_READY'
-  | 'REVIEW_APPROVED';
+  | 'REVIEW_APPROVED'
+  | 'REVIEW_PENDING';
 
 export interface INotification {
   userId: Types.ObjectId;

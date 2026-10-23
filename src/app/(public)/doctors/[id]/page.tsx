@@ -13,7 +13,9 @@ import {
   Award,
   ArrowLeft,
   CheckCircle2,
+  MessageSquare,
 } from 'lucide-react';
+import { getDoctorReviewsAction } from '@/actions/review.actions';
 
 interface DoctorProfilePageProps {
   params: Promise<{ id: string }>;
@@ -44,6 +46,18 @@ export default async function PublicDoctorDetailPage({ params }: DoctorProfilePa
   const avatarUrl = doctor.avatarUrl || doctor.user?.image;
   const deptName = doctor.department?.name || 'General Care';
   const IconComponent = getDepartmentIcon(doctor.department?.iconName || 'Activity');
+
+  const reviewsRes = await getDoctorReviewsAction(id, false);
+  const reviewsData = reviewsRes.success && reviewsRes.data
+    ? reviewsRes.data
+    : {
+        reviews: [],
+        stats: {
+          averageRating: doctor.averageRating,
+          reviewCount: doctor.reviewCount,
+          distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        },
+      };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -187,6 +201,95 @@ export default async function PublicDoctorDetailPage({ params }: DoctorProfilePa
                   );
                 })}
               </div>
+            </div>
+
+            {/* Patient Reviews & Clinical Testimonials */}
+            <div className="p-6 sm:p-8 rounded-3xl border bg-card text-card-foreground shadow-xs space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-amber-500" /> Patient Feedback & Reviews
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Verified consultation feedback from patients treated by Dr. {docName}.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                  <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                  <span className="font-bold text-sm text-foreground">
+                    {reviewsData.stats.averageRating > 0
+                      ? reviewsData.stats.averageRating.toFixed(1)
+                      : '5.0'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({reviewsData.stats.reviewCount})
+                  </span>
+                </div>
+              </div>
+
+              {reviewsData.reviews.length === 0 ? (
+                <div className="rounded-2xl border border-dashed p-8 text-center bg-muted/20">
+                  <Star className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-xs text-muted-foreground">
+                    No verified reviews published yet for this clinician.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviewsData.reviews.map((rev: any) => {
+                    const patientName = rev.patientId?.userId?.name || 'Verified Patient';
+
+                    return (
+                      <div
+                        key={rev.id || rev._id}
+                        className="p-4 rounded-2xl border bg-muted/20 space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 font-bold text-xs">
+                              {patientName.slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="font-bold text-foreground">{patientName}</span>
+                            <Badge variant="outline" className="text-[9px]">
+                              Verified Visit
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-amber-500">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`h-3 w-3 ${
+                                  s <= rev.rating ? 'fill-amber-500' : 'text-muted-foreground/30'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <p className="text-muted-foreground leading-relaxed italic">
+                          "{rev.comment}"
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground border-t border-border/40">
+                          <span>
+                            Consultation date:{' '}
+                            {new Date(rev.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                          {rev.bedsideMannerRating && (
+                            <span>Bedside Manner: {rev.bedsideMannerRating}/5 ★</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

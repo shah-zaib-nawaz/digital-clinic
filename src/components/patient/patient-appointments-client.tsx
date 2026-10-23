@@ -27,7 +27,9 @@ import {
   Loader2,
   FileText,
   CalendarX2,
+  Star,
 } from 'lucide-react';
+import { ReviewModal } from '@/components/reviews/review-modal';
 
 interface PatientAppointmentsClientProps {
   initialAppointments: AppointmentWithDetailsLean[];
@@ -39,6 +41,7 @@ export function PatientAppointmentsClient({
   const router = useRouter();
   const [appointments, setAppointments] = useState<AppointmentWithDetailsLean[]>(initialAppointments);
   const [selectedApptForCancel, setSelectedApptForCancel] = useState<AppointmentWithDetailsLean | null>(null);
+  const [selectedApptForReview, setSelectedApptForReview] = useState<AppointmentWithDetailsLean | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -193,11 +196,22 @@ export function PatientAppointmentsClient({
 
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     {appt.status === 'completed' && (
-                      <Link href="/patient/records">
-                        <Button variant="outline" size="sm" className="text-xs h-8 gap-1">
-                          <FileText className="h-3.5 w-3.5" /> Visit Summary
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 gap-1 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/20"
+                          onClick={() => setSelectedApptForReview(appt)}
+                        >
+                          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Leave Review
                         </Button>
-                      </Link>
+
+                        <Link href="/patient/records">
+                          <Button variant="outline" size="sm" className="text-xs h-8 gap-1">
+                            <FileText className="h-3.5 w-3.5" /> Visit Summary
+                          </Button>
+                        </Link>
+                      </>
                     )}
 
                     {isCancellable && (
@@ -276,6 +290,21 @@ export function PatientAppointmentsClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Review Modal Dialog */}
+      {selectedApptForReview && (
+        <ReviewModal
+          appointmentId={selectedApptForReview.id || selectedApptForReview._id.toString()}
+          doctorName={selectedApptForReview.doctor?.user?.name || 'Physician'}
+          departmentName={selectedApptForReview.department?.name}
+          open={Boolean(selectedApptForReview)}
+          onOpenChange={(open) => !open && setSelectedApptForReview(null)}
+          onSuccess={() => {
+            setSelectedApptForReview(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
