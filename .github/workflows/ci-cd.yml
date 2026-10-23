@@ -1,0 +1,197 @@
+name: Digital Clinic CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==============================================================
+  # Job 1: Supply Chain, Code Quality & TypeScript 7.0 Typecheck
+  # ==============================================================
+  quality-and-typecheck:
+    name: Quality, Security & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Supply-Chain & Lockfile Integrity
+        run: pnpm verify:supply-chain
+
+      - name: Run ESLint
+        run: pnpm lint
+
+      - name: Run TypeScript 7.0 Typecheck (tsgo --noEmit)
+        run: pnpm typecheck
+
+  # ==============================================================
+  # Job 2: Vitest 5.0.5 Unit & Replica-Set Integration Tests
+  # ==============================================================
+  unit-and-integration:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Vitest Unit Tests
+        run: pnpm test:unit
+
+      - name: Run 50-Case Adversarial AI Safety Benchmark
+        run: pnpm eval:ai-safety
+
+  # ==============================================================
+  # Job 3: Playwright 1.64.1 Sharded E2E & WebMCP Agent Tests
+  # ==============================================================
+  e2e-playwright-sharded:
+    name: Playwright E2E & WebMCP (Shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/4', '2/4', '3/4', '4/4']
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright Tests (Shard ${{ matrix.shard }})
+        run: pnpm exec playwright test --shard=${{ matrix.shard }}
+        env:
+          CI: 'true'
+          PLAYWRIGHT_TEST_BASE_URL: 'http://localhost:3000'
+
+      - name: Upload Shard Blob Report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-shard-${{ strategy.job-index }}
+          path: blob-report
+          retention-days: 1
+
+  # ==============================================================
+  # Merge Playwright Reports
+  # ==============================================================
+  merge-playwright-reports:
+    name: Merge Sharded Playwright Reports
+    needs: [e2e-playwright-sharded]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download Sharded Blob Reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-shard-*
+          merge-multiple: true
+
+      - name: Merge Reports
+        run: pnpm exec playwright merge-reports --reporter html ./all-blob-reports
+
+      - name: Upload Unified HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-unified
+          path: playwright-report
+          retention-days: 14
+
+  # ==============================================================
+  # Job 4: Next.js 16.4 Turbopack Production Build
+  # ==============================================================
+  production-build:
+    name: Next.js 16.4 Production Build
+    needs: [quality-and-typecheck, unit-and-integration]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Next.js Turbopack Build
+        run: pnpm build
+        env:
+          NODE_ENV: 'production'
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+          AI_HMAC_SECRET: ${{ secrets.AI_HMAC_SECRET }}

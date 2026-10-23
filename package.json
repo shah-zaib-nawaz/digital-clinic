@@ -13,7 +13,8 @@
     "test:unit": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
-    "eval:ai-safety": "tsx scripts/eval-clinical-agent.ts"
+    "eval:ai-safety": "tsx scripts/eval-clinical-agent.ts",
+    "verify:supply-chain": "tsx scripts/verify-supply-chain.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.99",
