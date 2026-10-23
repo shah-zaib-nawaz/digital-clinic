@@ -1,25 +1,20 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { AppointmentWithDetailsLean } from '@/models/Appointment';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
   Clock,
-  CheckCircle2,
-  AlertCircle,
   FileText,
-  User,
   Phone,
   FileCheck,
-  UserX,
   Play,
   Calendar,
 } from 'lucide-react';
+import { SoapNoteDialog } from '@/components/clinical/soap-note-dialog';
 
 interface DoctorQueueClientProps {
   initialQueue: AppointmentWithDetailsLean[];
@@ -27,9 +22,12 @@ interface DoctorQueueClientProps {
 
 export function DoctorQueueClient({ initialQueue }: DoctorQueueClientProps) {
   const router = useRouter();
-  const [queue, setQueue] = useState<AppointmentWithDetailsLean[]>(initialQueue);
+  const [queue] = useState<AppointmentWithDetailsLean[]>(initialQueue);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [, startTransition] = useTransition();
+  const [activeAppointment, setActiveAppointment] = useState<{
+    id: string;
+    patientName: string;
+  } | null>(null);
 
   const filtered = queue.filter((item) => {
     if (filterStatus === 'all') return true;
@@ -189,19 +187,34 @@ export function DoctorQueueClient({ initialQueue }: DoctorQueueClientProps) {
 
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     {appt.status === 'confirmed' && (
-                      <Link href={`/doctor/appointments/${apptId}/notes`}>
-                        <Button size="sm" className="gap-1.5 h-8 text-xs shadow-2xs">
-                          <Play className="h-3.5 w-3.5 fill-current" /> Start Consultation
-                        </Button>
-                      </Link>
+                      <Button
+                        size="sm"
+                        className="gap-1.5 h-8 text-xs shadow-2xs bg-teal-600 hover:bg-teal-700 text-white"
+                        onClick={() =>
+                          setActiveAppointment({
+                            id: apptId,
+                            patientName,
+                          })
+                        }
+                      >
+                        <Play className="h-3.5 w-3.5 fill-current" /> Start Consultation
+                      </Button>
                     )}
 
                     {appt.status === 'completed' && (
-                      <Link href={`/doctor/appointments/${apptId}/notes`}>
-                        <Button variant="outline" size="sm" className="gap-1 h-8 text-xs">
-                          <FileCheck className="h-3.5 w-3.5 text-emerald-600" /> View Sealed Note
-                        </Button>
-                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 h-8 text-xs"
+                        onClick={() =>
+                          setActiveAppointment({
+                            id: apptId,
+                            patientName,
+                          })
+                        }
+                      >
+                        <FileCheck className="h-3.5 w-3.5 text-emerald-600" /> View / Amend Note
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -234,6 +247,20 @@ export function DoctorQueueClient({ initialQueue }: DoctorQueueClientProps) {
             );
           })}
         </div>
+      )}
+
+      {/* Interactive SOAP Note Dialog */}
+      {activeAppointment && (
+        <SoapNoteDialog
+          appointmentId={activeAppointment.id}
+          patientName={activeAppointment.patientName}
+          open={Boolean(activeAppointment)}
+          onOpenChange={(open) => !open && setActiveAppointment(null)}
+          onSuccess={() => {
+            setActiveAppointment(null);
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );
