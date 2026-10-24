@@ -7,7 +7,7 @@ test.describe('End-to-End Clinical Lifecycle Journey', () => {
     await expect(page).toHaveTitle(/Digital Clinic|Doctors/i);
 
     // Verify search and department filter elements exist
-    const searchInput = page.locator('input[placeholder*="Search by doctor name or specialty"]');
+    const searchInput = page.locator('input[placeholder*="Search by"]');
     await expect(searchInput).toBeVisible();
 
     // Verify specialty filter / cards

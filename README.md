@@ -1,11 +1,14 @@
 # Digital Clinic & Healthcare Appointment System
 
+[![CI/CD Pipeline](https://github.com/shah-zaib-nawaz/digital-clinic/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/shah-zaib-nawaz/digital-clinic/actions/workflows/ci-cd.yml)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-shah--zaib--nawaz%2Fdigital--clinic-181717?style=flat&logo=github)](https://github.com/shah-zaib-nawaz/digital-clinic)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![HIPAA Ready](https://img.shields.io/badge/Compliance-HIPAA--Ready-emerald.svg)](https://en.wikipedia.org/wiki/Health_Insurance_Portability_and_Accountability_Act)
 [![Next.js 16.4](https://img.shields.io/badge/Next.js-16.4.2_LTS-black?style=flat&logo=next.js)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.3.0-blue?style=flat&logo=react)](https://react.dev/)
 [![TypeScript 7.0](https://img.shields.io/badge/TypeScript-7.0_tsgo-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4.3.3-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![MongoDB 7.7](https://img.shields.io/badge/MongoDB-7.7.0_Replica_Set-47A248?style=flat&logo=mongodb)](https://www.mongodb.com/)
-[![Mongoose 9.11](https://img.shields.io/badge/Mongoose-9.11.3-880000?style=flat)](https://mongoosejs.com/)
 [![Better Auth 1.7](https://img.shields.io/badge/Better_Auth-1.7.12_RBAC-purple?style=flat)](https://better-auth.com/)
 [![Vercel AI SDK v7](https://img.shields.io/badge/Vercel_AI_SDK-v7_(ai@7.0.148)-black?style=flat)](https://sdk.vercel.ai/)
 [![Vitest 5.0](https://img.shields.io/badge/Vitest-5.0.5-6E9F18?style=flat&logo=vitest)](https://vitest.dev/)
@@ -15,7 +18,7 @@ An enterprise-grade outpatient clinical scheduling, telehealth, electronic healt
 
 ---
 
-## Architecture Overview
+## 🏛️ System Architecture
 
 ```mermaid
 flowchart TD
@@ -58,180 +61,196 @@ flowchart TD
 
 ---
 
-## 11-Phase Implementation Trajectory
+## 🚀 Key Technical Capabilities
 
-| Phase | Milestone | Core Deliverables | Verification Status |
-| :---: | :--- | :--- | :---: |
-| **0** | **Architecture & Skills** | C4 architecture, MoSCoW matrix, OKLCH design tokens, Cloudinary signed presets, 4 agent skills. | **100% PASS** |
-| **1** | **Scaffolding & Auth Layer** | Next.js 16.4.2, `tsgo`, Mongoose 9.11 schemas, Better Auth 1.7.12 RBAC (4 roles), role dashboard shells. | **100% PASS** |
-| **2** | **Directory & Schedules** | Instant cached search (`"use cache"` + `cacheTag`), Cloudinary signed ingestion, weekly recurring slot math. | **100% PASS** |
-| **3** | **Booking & Concurrency** | 5-Step Wizard, 5-min TTL lock (`heldUntil`), atomic multi-slot reschedule, 10-thread race test passed. | **100% PASS** |
-| **4** | **Communications & Real-Time** | Resend 6.34 transactional emails with React Email 6.11, real-time SSE notifications, `<NotificationBell />`, 24h cron worker, Twilio SMS. | **100% PASS** |
-| **5** | **AI Receptionist & HITL** | Vercel AI SDK v7, OpenAI `gpt-4o`, cryptographic HMAC-SHA256 HITL approval cards, red-flag emergency symptoms interceptor. | **100% PASS** |
-| **6** | **Clinical Charting & SOAP** | `VisitNote` with ICD-10 diagnostics, `Prescription` model, physician signature sealing, doctor notes workspace, patient EHR view. | **100% PASS** |
-| **7** | **Reviews & Doctor Reputation** | Verified appointment reviews (1–5 stars, wait time, bedside manner), admin moderation queue, MongoDB `$avg` rating aggregation pipeline. | **100% PASS** |
-| **8** | **Telehealth Consultations** | WebRTC video consultation rooms, in-memory SSE signaling bus (`signaling-bus.ts`), patient waiting room, clinician cockpit with live SOAP charting. | **100% PASS** |
-| **9** | **Autonomous Testing Suite** | Vitest 5.0.5 unit test suite (53 tests), MongoDB 7.7 Atlas Replica Set integration tests (5 tests), Playwright 1.64.1 E2E, 50-case adversarial AI safety benchmark (100% score). | **100% PASS** |
-| **10** | **Production Hardening & CI/CD** | Zod 4 runtime `env.ts`, supply-chain lockfile audit, 4-stage GitHub Actions CI/CD (`.github/workflows/ci-cd.yml`), Vercel Fluid Compute config, multi-stage Alpine Dockerfile, AI budget circuit breaker, and legal/disclaimer pages. | **100% PASS** |
+### 1. Concurrency-Safe 5-Minute Slot Reservation Lock
+- **Atomic 5-Minute Reservation Lock**: When a patient selects an appointment slot, MongoDB atomically claims it (`status: 'held'`) with a native TTL index on `heldUntil`. If abandoned, the slot automatically expires and frees up in exactly 300 seconds.
+- **Double-Booking Immunity**: Enforced via a compound partial unique index `{ doctorId: 1, date: 1, startTime: 1 }` filtering `{ status: { $in: ['held', 'pending', 'confirmed'] } }`. Verified under 10-thread simultaneous race tests (`E11000` isolation).
+- **Atomic Multi-Slot Rescheduling**: Executed inside `connection.withTransaction()`; if destination slot is claimed, the transaction aborts cleanly, safeguarding the original booking.
 
----
-
-## Key Technical Features
-
-### 1. High-Concurrency Concurrency-Resilient Booking Engine
-- **Atomic 5-Minute Reservation Lock**: When a patient selects a slot, MongoDB atomically claims it (`status: 'held'`) with a TTL index on `heldUntil`. If abandoned, the slot automatically expires in 300 seconds.
-- **Double-Booking Immunity**: Enforced via a partial compound unique index `{ doctorId: 1, date: 1, startTime: 1 }` filtering `{ status: { $in: ['held', 'pending', 'confirmed'] } }`. Verified under 10-thread simultaneous race conditions.
-- **Atomic Rescheduling Rollback**: Executed inside `connection.withTransaction()`; if destination slot is claimed, transaction aborts cleanly, preserving the original booking.
-
-### 2. Clinical AI Receptionist with Cryptographic HITL Safeguards
+### 2. Autonomous Clinical AI Receptionist with HMAC Guardrails
 - **Vercel AI SDK v7 (`ai@7.0.148`)**: Powered by OpenAI `gpt-4o` with `toolCallConcurrency: 1` to strictly serialize clinical tool side-effects.
 - **HMAC-SHA256 Human-in-the-Loop (HITL) Cards**: The AI cannot mutate appointment states unilaterally. Every slot hold generates a tamper-evident cryptographic token (`timingSafeEqual`) requiring direct patient click authorization with a 10-minute expiry window.
-- **Emergency Red-Flag Interceptor**: Automated interception of acute presentations (cardiac, stroke, dyspnea, hemorrhage, anaphylaxis, suicide). Halts booking and issues prominent 911 directives.
-- **Daily Budget Circuit Breaker**: Evaluates daily clinic token spend (`checkClinicAIBudgetAndRateLimit`); trips smoothly if cap is reached and deep-links patients to the 5-step wizard.
+- **Emergency Red-Flag Interceptor**: Automated interception of acute presentations (cardiac, stroke, dyspnea, hemorrhage, anaphylaxis, suicide). Halts booking and issues prominent 911 emergency directives.
+- **Daily Budget Circuit Breaker**: Evaluates daily clinic token spend (`checkClinicAIBudgetAndRateLimit`); trips smoothly if cap is reached and deep-links patients to the 5-step booking wizard.
 
 ### 3. Electronic Health Records (EHR) & Sealed SOAP Notes
-- **SOAP Format**: Subjective, Objective (vitals), Assessment (ICD-10 search), and Plan (prescriptions with refills and regimens).
+- **SOAP Standard**: Subjective, Objective (vitals), Assessment (ICD-10 search), and Plan (prescriptions with refills and regimens).
 - **Cryptographic Signature Sealing**: Once finalized by the physician, the note is sealed with an SHA-256 signature hash and timestamp, transitioning the appointment to `completed`.
 - **Verified Reviews & Rating Aggregation**: Only completed appointments permit patient reviews. Admin approval triggers a MongoDB aggregation pipeline recalculating `Doctor.averageRating` and `Doctor.reviewCount`.
 
-### 4. Telehealth Video Consultations
-- **WebRTC Peer-to-Peer Rooms**: Sub-50ms peer connection utilizing Google STUN relays.
+### 4. WebRTC Telehealth Consultation Suites
+- **Sub-50ms Video Rooms**: Peer connection utilizing Google STUN relays.
 - **Zero-Dependency SSE Signaling**: In-memory event bus on `globalThis` connected to authenticated `/api/telehealth/signal` SSE streams.
 - **Clinician Cockpit**: Split-screen live video consultation with concurrent SOAP charting and real-time in-call text chat.
 
 ---
 
-## Pre-Seeded Test Credentials
+## 🔑 Pre-Seeded Demo Credentials
 
 All accounts share the default development password: **`Password123!`**
 
-| Role | Email Address | Password | Default Portal URL |
-| :--- | :--- | :--- | :--- |
-| **Patient** | `patient@clinic.test` | `Password123!` | `/patient` |
-| **Doctor (General)** | `doctor@clinic.test` | `Password123!` | `/doctor` |
-| **Doctor (Cardiology)** | `sarah.jenkins@digitalclinic.org` | `Password123!` | `/doctor` |
-| **Doctor (Dermatology)** | `elena.rostova@digitalclinic.org` | `Password123!` | `/doctor` |
-| **Admin** | `admin@clinic.test` | `Password123!` | `/admin` |
-| **Superadmin** | `superadmin@clinic.test` | `Password123!` | `/admin` |
+| Role | Email Address | Password | Direct Portal Route | Capabilities |
+| :--- | :--- | :--- | :--- | :--- |
+| **Patient** | `patient@clinic.test` | `Password123!` | [`/patient`](http://localhost:3000/patient) | Browse doctors, 5-min TTL booking, telehealth room, view EHR notes |
+| **Doctor (General)** | `doctor@clinic.test` | `Password123!` | [`/doctor`](http://localhost:3000/doctor) | Daily queue, author/seal SOAP notes, manage availability |
+| **Doctor (Cardiology)** | `sarah.jenkins@digitalclinic.org` | `Password123!` | [`/doctor`](http://localhost:3000/doctor) | Cardiology outpatient schedule, patient clinical history |
+| **Doctor (Dermatology)** | `elena.rostova@digitalclinic.org` | `Password123!` | [`/doctor`](http://localhost:3000/doctor) | Dermatology outpatient schedule, patient clinical history |
+| **Admin** | `admin@clinic.test` | `Password123!` | [`/admin`](http://localhost:3000/admin) | Doctor management, department setup, review moderation |
+| **Superadmin** | `superadmin@clinic.test` | `Password123!` | [`/admin`](http://localhost:3000/admin) | Full system administration, AI telemetry, audit logs |
 
 ---
 
-## Getting Started
+## 🗺️ Application Route Matrix (26 Verified Routes)
+
+| Category | Route | Access Level | Description |
+| :--- | :--- | :--- | :--- |
+| **Public** | `/` | Anonymous | Dynamic homepage with search, metrics, faculty, and role sandbox |
+| **Public** | `/doctors` | Anonymous | Searchable physician directory with specialty filters & sort |
+| **Public** | `/doctors/[id]` | Anonymous | Physician profile, accepted insurance, reviews, and slots |
+| **Public** | `/privacy` | Anonymous | HIPAA & GDPR privacy policy and patient rights |
+| **Public** | `/terms` | Anonymous | Terms of clinical service and telehealth consent |
+| **Public** | `/ai-disclaimer` | Anonymous | Non-diagnostic AI triage limitations & 911 emergency notice |
+| **Auth** | `/auth/sign-in` | Anonymous | Better Auth credentials sign-in with redirect callback |
+| **Auth** | `/auth/sign-up` | Anonymous | Patient registration with auto-provisioned intake profile |
+| **Patient** | `/patient` | Patient Role | Patient dashboard overview and upcoming appointments |
+| **Patient** | `/patient/book` | Patient Role | 5-step concurrency-safe booking wizard |
+| **Patient** | `/patient/appointments` | Patient Role | Patient appointment management, cancellations & rescheduling |
+| **Patient** | `/patient/records` | Patient Role | Sealed SOAP clinical visit notes & digital prescriptions |
+| **Patient** | `/patient/telehealth/[id]` | Patient Role | WebRTC telehealth patient waiting room & consultation suite |
+| **Doctor** | `/doctor` | Doctor Role | Doctor cockpit, today's patient queue, and appointment status |
+| **Doctor** | `/doctor/schedule` | Doctor Role | Recurring weekly availability, slot duration, and break rules |
+| **Doctor** | `/doctor/notes` | Doctor Role | Sealed SOAP visit notes archive and patient search |
+| **Doctor** | `/doctor/appointments/[id]/notes` | Doctor Role | Live SOAP clinical note authoring workspace & ICD-10 search |
+| **Doctor** | `/doctor/telehealth/[id]` | Doctor Role | Doctor telehealth room with concurrent clinical charting |
+| **Doctor** | `/doctor/patients` | Doctor Role | Patient roster with historical visits & medical intakes |
+| **Doctor** | `/doctor/reviews` | Doctor Role | Patient feedback and ratings breakdown |
+| **Admin** | `/admin` | Admin Role | Operations analytics, appointment stats, and provider counts |
+| **Admin** | `/admin/doctors` | Admin Role | Physician directory management and status controls |
+| **Admin** | `/admin/doctors/new` | Admin Role | Onboard new credentialed physician profile |
+| **Admin** | `/admin/departments` | Admin Role | Medical department CRUD with icon selector & descriptions |
+| **Admin** | `/admin/reviews` | Admin Role | Patient review moderation queue & rating recalculation |
+| **Admin** | `/admin/ai-telemetry` | Admin Role | AI token spend, guardrails deflection metrics & safety audit |
+
+---
+
+## 🛠️ Quick Start & Local Setup
 
 ### Prerequisites
-- **Node.js**: >= 24.0.0
-- **pnpm**: >= 11.0.0
-- **MongoDB**: 7.7.0 Replica Set (or MongoDB Atlas cluster)
+- **Node.js**: `22.x` (LTS) or `24.x`
+- **pnpm**: `10.x` or `11.x`
+- **MongoDB**: `7.7.x` Replica Set (or MongoDB Atlas)
 
-### 1. Installation
+### 1. Clone Repository
 ```bash
-git clone https://github.com/your-org/digital-clinic.git
+git clone https://github.com/shah-zaib-nawaz/digital-clinic.git
 cd digital-clinic
+```
+
+### 2. Install Dependencies
+```bash
 pnpm install --frozen-lockfile
 ```
 
-### 2. Environment Configuration
+### 3. Configure Environment Variables
 Create `.env.local` in the project root:
 ```env
-# Database (MongoDB 7.7.0 Replica Set / Atlas)
+# Database (MongoDB 7.7 Replica Set or MongoDB Atlas)
 MONGODB_URI="mongodb+srv://<user>:<password>@cluster0.mongodb.net/digital_clinic?retryWrites=true&w=majority"
 
 # Better Auth 1.7.12
-BETTER_AUTH_SECRET="generate-a-64-char-hex-secret-here"
+BETTER_AUTH_SECRET="generate-a-64-character-hex-secret-here"
 BETTER_AUTH_URL="http://localhost:3000"
 
-# AI Assistant (Vercel AI SDK v7 & OpenAI gpt-4o)
+# AI Receptionist (Vercel AI SDK v7 & OpenAI gpt-4o)
 OPENAI_API_KEY="sk-proj-..."
-AI_HMAC_SECRET="generate-a-separate-32-char-hmac-secret-for-tool-approvals"
+AI_HMAC_SECRET="generate-a-separate-32-character-hmac-secret-for-tool-approvals"
 AI_DAILY_SPEND_CAP_USD="50.0"
 
-# Cloudinary Direct Signed Media Ingestion
+# Cloudinary Direct Signed Media Ingestion (Optional)
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="your-cloud-name"
 NEXT_PUBLIC_CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
 
-# Transactional Communications (Resend & Twilio)
+# Transactional Communications (Resend & Twilio) (Optional)
 RESEND_API_KEY="re_..."
 EMAIL_FROM="Digital Clinic <notifications@yourdomain.com>"
 ENABLE_TWILIO_SMS="false"
-
-# Observability (Sentry v11)
-NEXT_PUBLIC_SENTRY_DSN="https://...@sentry.io/..."
 ```
 
-### 3. Database Seeding
+### 4. Seed Database
 ```bash
-# Seed authentication test users (patient, doctor, admin, superadmin)
+# Seed auth accounts (patient, doctor, admin, superadmin)
 pnpm exec tsx scripts/seed-auth-users.ts
 
-# Seed core medical departments, 12 doctors, and 7-day availability schedules
+# Seed 6 departments, 12 doctors, and 7-day availability slots
 pnpm exec tsx scripts/seed-clinic.ts
-
-# Seed idempotent production baseline
-pnpm exec tsx scripts/seed-production-baseline.ts
 ```
 
-### 4. Running Locally
+### 5. Launch Development Server
 ```bash
-# Launch Next.js Turbopack development server
 pnpm dev
-
-# Application live at: http://localhost:3000
-# Healthcheck endpoint: http://localhost:3000/api/health
 ```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## Verification & Testing Commands
+## 🧪 Comprehensive Verification Suite
+
+Run all quality checks locally:
 
 ```bash
-# 1. Vitest 5.0.5 Unit Tests (53 tests across 4 domain suites)
-pnpm test:unit
-
-# 2. MongoDB 7.7 Replica Set Integration Tests (ACID transactions & 10-thread race)
-pnpm test:integration
-
-# 3. 50-Case Adversarial AI Clinical Safety Benchmark (100% score)
-pnpm eval:ai-safety
-
-# 4. Supply-Chain & Lockfile Integrity Auditor
+# 1. Supply-Chain & Lockfile Integrity Check
 pnpm verify:supply-chain
 
-# 5. TypeScript 7.0 Typecheck (tsgo --noEmit)
+# 2. TypeScript 7.0 Typecheck
 pnpm typecheck
 
-# 6. Full Automated HTTP Route Probe (26 application endpoints)
+# 3. Code Quality & Linting
+pnpm lint
+
+# 4. Vitest Unit Test Suite (53 tests across 4 domain suites)
+pnpm test:unit
+
+# 5. 50-Case Adversarial AI Safety & Emergency Triage Benchmark
+pnpm eval:ai-safety
+
+# 6. MongoDB Replica Set ACID Transactions & Concurrency Race Suite
+pnpm test:integration
+
+# 7. Playwright E2E & WebMCP Agent Tests
+pnpm test:e2e
+
+# 8. Full 26-Route Automated HTTP Probe
 pnpm exec tsx scripts/probe-all-routes.ts
 
-# 7. Next.js Turbopack Production Build
+# 9. Next.js 16.4 Turbopack Production Build
 pnpm build
 ```
 
 ---
 
-## Containerization & Deployment
+## ⚙️ GitHub Actions CI/CD Pipeline
 
-### Multi-Stage Docker Build
-```bash
-# Build production Docker image (Node 24 Alpine, non-root user nextjs UID 1001)
-docker build -t digital-clinic:latest .
+The automated CI/CD pipeline (`.github/workflows/ci-cd.yml`) executes on every `push` and `pull_request` to the `main` branch across 5 parallel stages:
 
-# Run container with active healthcheck
-docker run -p 3000:3000 --env-file .env.local digital-clinic:latest
+```mermaid
+flowchart LR
+    A["Quality, Security & Typecheck"] --> D["Next.js Production Build"]
+    B["Unit & Replica Set Tests"] --> D
+    C["Playwright 4-Way Sharded E2E"] --> E["Merge Playwright Reports"]
 ```
 
-### Vercel Fluid Compute
-Deployment is configured in `vercel.json` with 60-second function timeouts on `/api/ai/chat`, 300-second timeouts on `/api/telehealth/signal`, security headers (`X-Frame-Options: DENY`, strict permissions policy), and automated daily reminder cron execution (`0 8 * * *`).
+1. **Stage 1 (Quality & Security)**: Validates `.npmrc` trust policy, locks down dependency integrity with `verify:supply-chain`, runs ESLint, and executes `tsgo --noEmit`.
+2. **Stage 2 (Unit & Integration)**: Runs all 53 Vitest unit tests, the 50-case adversarial AI safety benchmark, and MongoDB replica-set transaction tests with `mongodb-memory-server`.
+3. **Stage 3 (Sharded E2E)**: Runs Playwright across 4 matrix shards (`1/4`, `2/4`, `3/4`, `4/4`) with a dedicated MongoDB 7 service container.
+4. **Stage 4 (Report Merge)**: Aggregates shard blob artifacts into an interactive unified Playwright HTML report.
+5. **Stage 5 (Production Build)**: Executes `next build` with Turbopack, validating static generation and Cache Components across all 35 routes.
 
 ---
 
-## Regulatory Compliance & Legal Disclaimers
+## 📄 License & Compliance
 
-- **HIPAA & GDPR Privacy Policy**: [`/privacy`](file:///d:/anti%202.0/digital-clinic/src/app/(public)/privacy/page.tsx)
-- **Terms of Clinical Service**: [`/terms`](file:///d:/anti%202.0/digital-clinic/src/app/(public)/terms/page.tsx)
-- **Non-Diagnostic AI Disclaimer**: [`/ai-disclaimer`](file:///d:/anti%202.0/digital-clinic/src/app/(public)/ai-disclaimer/page.tsx)
-
----
-
-## License
-MIT License. Developed for enterprise clinical outpatient operations.
+- **License**: MIT License
+- **HIPAA Compliance**: Outpatient PHI encryption, audit logging, and sealed clinical visit documentation.
+- **Medical Disclaimer**: Digital Clinic and its AI Receptionist are for outpatient administrative scheduling and non-urgent triage. In the event of a medical emergency (chest pain, shortness of breath, severe trauma), patients are immediately directed to call **911**.
